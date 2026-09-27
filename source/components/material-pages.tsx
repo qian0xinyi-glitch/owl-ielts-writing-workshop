@@ -1,0 +1,25 @@
+import {siteUrl} from "@/lib/navigation";
+import {ArrowUpRight,ChevronRight,BookOpen,ArrowRight,Shuffle} from "lucide-react";
+import {categories,questions,categoryForTopic,practiceHref,type Topic,type Chain} from "@/lib/content";
+import {training,mechanismForChain,exercisesForChain} from "@/lib/training";
+import {SiteShell} from "./site-shell";
+import {getTopicIcon} from "./category-icons";
+import {ClozePractice} from "./cloze-practice";
+
+export function Tags({tags}:{tags:string[]}){return <div className="tags">{tags.map(tag=><a className="tag tag-button" key={tag} href={siteUrl('/practice?tag='+encodeURIComponent(tag))} title={'查看相关题目：'+tag}>#{tag}</a>)}</div>}
+export function Breadcrumbs({topic,chain}:{topic?:Topic,chain?:Chain}){return <div className="breadcrumbs"><a href={siteUrl("/")}>素材库</a><ChevronRight/>{topic&&<><a href={siteUrl('/?category='+topic.categoryId)}>{categoryForTopic(topic).name}</a><ChevronRight/></>}{chain&&topic?<><a href={siteUrl('/library/'+topic.id)}>{topic.name}</a><ChevronRight/><span>{chain.id}</span></>:<span>{topic?.name||'全部话题'}</span>}</div>}
+export function TopicPage({topic}:{topic:Topic}){
+  const n=categories.findIndex(c=>c.id===topic.categoryId)%5;const Icon=getTopicIcon(topic.id,topic.categoryId);
+  return <SiteShell><Breadcrumbs topic={topic}/><div className="topic-heading"><span className={'topic-icon tone-'+n}><Icon size={28}/></span><div><p className="english-label">{topic.english}</p><h1>{topic.name}</h1></div></div><p className="topic-summary">{topic.description}</p><Tags tags={topic.tags}/><div className="chain-list">{topic.blocks.map(b=><a className="chain-row" href={siteUrl('/library/'+topic.id+'/'+b.id)} key={b.id}><span className="chain-code">{b.id}</span><div className="chain-row-main"><h2>{b.name}</h2><p>{b.chain}</p><span className="mechanism-tag chain-mechanism">{mechanismForChain(b.id)?.name}</span></div><ArrowUpRight size={23}/></a>)}</div><p className="intro-copy" style={{fontSize:13,marginTop:23}}>每条素材包含完整逻辑链、英文解释段与全文挖空。按机制标签，还可以进入相关仿写训练。</p></SiteShell>;
+}
+export function ChainPage({topic,chain}:{topic:Topic,chain:Chain}){
+  const related=questions.filter(q=>q.guides.some(g=>g.chainId===chain.id)).slice(0,4);
+  const [tip,frame]=chain.guide.split('仿写 ');const mechanism=mechanismForChain(chain.id)!;
+  const sourceTasks=exercisesForChain(chain.id);
+  const imitationHref=sourceTasks.length?'/imitation/'+sourceTasks[0].id:'/imitation?mechanism='+mechanism.id;
+  return <SiteShell><Breadcrumbs topic={topic} chain={chain}/><div className="page-intro"><div><p className="eyebrow">{chain.id} / {topic.english.toUpperCase()}</p><h1>{chain.name}<span className="title-dot">.</span></h1></div></div><div className="content-layout"><article className="material-main">
+    <section className="paper-section"><div className="section-heading"><span className="section-index">01</span><h2>完整逻辑链</h2><span className="sub">THE LOGIC</span></div><div className="logic-flow">{chain.chain.split(' → ').map((s,i)=><div key={s}>{i>0&&<div className="flow-connector">↓</div>}<div className="logic-step"><b>{String(i+1).padStart(2,'0')}</b><span>{s}</span></div></div>)}</div></section>
+    <ClozePractice key={chain.id} chainId={chain.id} model={chain.model} blanks={training.cloze[chain.id]}/>
+    <section className="paper-section guide-section"><div className="section-heading"><span className="section-index">03</span><h2>把表达用到新论点里</h2><span className="sub">MAKE IT YOURS</span></div><p>{sourceTasks.length?'根据另一条素材的中文论点，迁移这段的推理方法，自己写出一小段解释。':'进入同一机制的迁移练习，学习如何用另一段的论点进行独立表达。'}</p><a className="imitation-entry" href={siteUrl(imitationHref)}><Shuffle size={17}/>{sourceTasks.length?'用这段开始仿写':'练习同一机制'}<ArrowRight size={17}/></a>{sourceTasks.length>1&&<a className="training-text-link" href={siteUrl('/imitation?source='+chain.id)}>查看以本段为起点的全部 {sourceTasks.length} 组练习 <ArrowRight size={14}/></a>}<section className="original-guide" aria-labelledby="sentence-hints-title"><h3 id="sentence-hints-title">句式提示</h3><p>{tip}</p>{frame&&<div className="guide-frame" lang="en">{frame}</div>}</section></section>
+  </article><aside className="sticky-side"><div className="side-note"><h3>因果机制与判断</h3><a href={siteUrl('/imitation?mechanism='+mechanism.id)} className="mechanism-tag">{mechanism.name}<ArrowUpRight size={13}/></a><p className="side-mechanism-note">{mechanism.description}</p><h3>关键词标签</h3><Tags tags={topic.tags}/><h3>带着素材练习</h3><p>先看题目限定，再选择适用的论证。</p>{related.map(q=><a className="related-link" href={siteUrl('/practice/'+q.id)} key={q.id}>{q.title} <ArrowRight size={14} style={{display:'inline',marginLeft:4}}/></a>)}{related.length===0&&<a className="related-link" href={siteUrl(practiceHref({category:topic.categoryId}))}>查看本类题目 <ArrowRight size={14} style={{display:'inline'}}/></a>}<a className="related-link" href={siteUrl(practiceHref({category:topic.categoryId,topic:topic.id}))}>查看本主题相关题目 <ArrowRight size={14} style={{display:'inline'}}/></a><a className="related-link" href={siteUrl('/library/'+topic.id)}><BookOpen size={14} style={{display:'inline',marginRight:6}}/>返回本话题全部逻辑链</a></div></aside></div></SiteShell>;
+}
